@@ -46,6 +46,6 @@ public class BootActivity extends ActionBarActivity {
                     finish();
                 }
             }
-        }, 2000);
+        }, 800);
     }
 }

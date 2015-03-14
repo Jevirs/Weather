@@ -2,6 +2,7 @@ apply plugin: 'com.android.application'
 
 dependencies {
     compile project(':materialDesign')
+    compile 'com.nineoldandroids:library:2.4.0'
 }
 android {
     compileSdkVersion 21

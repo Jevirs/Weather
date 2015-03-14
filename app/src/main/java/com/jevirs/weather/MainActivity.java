@@ -3,6 +3,8 @@ package com.jevirs.weather;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Resources;
+import android.graphics.drawable.Drawable;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
@@ -29,6 +31,7 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
+import com.gc.materialdesign.views.ButtonFloat;
 import com.google.gson.Gson;
 import com.jevirs.weather.Json.Index;
 import com.jevirs.weather.Json.JsonBean;
@@ -51,18 +54,62 @@ public class MainActivity extends ActionBarActivity {
     private ListView listView;
     private static final String[] strings={"城市管理","设置","关于","欢迎使用"};
     private static final int REQUEST_CODE=33;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        handler=new Handler();
-        initView();
+        if (savedInstanceState==null) {
+            setContentView(R.layout.activity_main);
+            handler = new Handler();
+            initView();
+        }
+        else {
+            TextView tv1=(TextView) findViewById(R.id.city);
+            tv1.setText(savedInstanceState.getString("city","hehe"));
+        }
     }
 
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        if (thecity!=null) {
+            outState.putString("city", findViewById(R.id.city).toString());
+            outState.putString("pm25", findViewById(R.id.pm25).toString());
+            outState.putString("date1", findViewById(R.id.date1).toString());
+            outState.putString("weather1", findViewById(R.id.weather1).toString());
+            outState.putString("tem1", findViewById(R.id.tem1).toString());
+            outState.putString("wind1", findViewById(R.id.wind1).toString());
+            outState.putString("date2", findViewById(R.id.date2).toString());
+            outState.putString("weather2", findViewById(R.id.weather2).toString());
+            outState.putString("tem2", findViewById(R.id.tem2).toString());
+            outState.putString("wind2", findViewById(R.id.wind2).toString());
+            outState.putString("date3", findViewById(R.id.date3).toString());
+            outState.putString("weather3", findViewById(R.id.weather3).toString());
+            outState.putString("tem3", findViewById(R.id.tem3).toString());
+            outState.putString("wind3", findViewById(R.id.wind3).toString());
+            outState.putString("date4", findViewById(R.id.date4).toString());
+            outState.putString("weather4", findViewById(R.id.weather4).toString());
+            outState.putString("tem4", findViewById(R.id.tem4).toString());
+            outState.putString("wind4", findViewById(R.id.wind4).toString());
+            super.onSaveInstanceState(outState);
+        }
+    }
 
     private void initView(){
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+
+        ButtonFloat fab= (ButtonFloat) findViewById(R.id.fab);
+        Resources resources=getApplicationContext().getResources();
+        Drawable drawable=resources.getDrawable(R.drawable.ic_add_white_24dp);
+        fab.setIconDrawable(drawable);
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent=new Intent();
+                intent.setClass(getApplicationContext(),ManageActivity.class);
+                startActivityForResult(intent, REQUEST_CODE);
+            }
+        });
 
         swipeRefreshLayout= (SwipeRefreshLayout) findViewById(R.id.swipeRefreshLayout);
         swipeRefreshLayout.setColorSchemeResources(android.R.color.holo_red_light,
@@ -76,14 +123,30 @@ public class MainActivity extends ActionBarActivity {
                     @Override
                     public void run() {
                         if (isOnline()){
+                            int num=39;
                             getData(thecity);
-                            handler.postDelayed(new Runnable() {
-                                @Override
-                                public void run() {
-                                    showData(thecity);
-                                    swipeRefreshLayout.setRefreshing(false);
-                                }
-                            }, 1000);
+                            SharedPreferences sharedPreferences=getSharedPreferences(thecity,MODE_PRIVATE);
+                            do {
+                                num=sharedPreferences.getInt("error",38);
+                            }while (num==38);
+
+                            if (num==0) {
+                                handler.postDelayed(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        showData(thecity);
+                                        swipeRefreshLayout.setRefreshing(false);
+                                    }
+                                }, 1000);
+                            }else {
+                                handler.post(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        Toast.makeText(getApplicationContext(),"木有该城市",Toast.LENGTH_SHORT).show();
+                                        swipeRefreshLayout.setRefreshing(false);
+                                    }
+                                });
+                            }
                         }else {
                             handler.postDelayed(new Runnable() {
                                 @Override
@@ -140,7 +203,7 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
-    private void getData(String city2query){
+    private void getData(final String city2query){
         Log.e("getData","GETDATA");
         String url="http://api.map.baidu.com/telematics/v3/weather?location="+decode(city2query)+"&output=json&ak=So1v0MPGI6v0bcL3yXVhAKl9";
         RequestQueue requestQueue= Volley.newRequestQueue(getApplicationContext());
@@ -150,110 +213,118 @@ public class MainActivity extends ActionBarActivity {
                 Gson gson=new Gson();
                 JsonBean jsonBean=gson.fromJson(String.valueOf(response),JsonBean.class);
 
-                String error=jsonBean.getError();    //错误信息
+                int error= Integer.parseInt(jsonBean.getError());    //错误信息
                 String status=jsonBean.getStatus();   //信息状态
                 String date=jsonBean.getDate();      //信息时间
+                Log.e("request",String.valueOf(error));
 
-                List<Results> list_results=jsonBean.getResults();
-                Results results=list_results.get(0);
-                List<Index> index=results.getIndex();
+                if (error==0) {
+                    List<Results> list_results = jsonBean.getResults();
+                    Results results = list_results.get(0);
+                    List<Index> index = results.getIndex();
 
-                String currentCity=results.getCurrentCity();   //城市
-                String pm25=results.getPm25();                 //pm2.5
+                    String currentCity = results.getCurrentCity();   //城市
+                    String pm25 = results.getPm25();                 //pm2.5
 
-                Index cloth=index.get(0);     //穿衣指数
-                String cloth_title=cloth.getTitle();
-                String cloth_zs=cloth.getZs();
-                String cloth_tipt=cloth.getTipt();
-                String cloth_des=cloth.getDes();
+                    Index cloth = index.get(0);     //穿衣指数
+                    String cloth_title = cloth.getTitle();
+                    String cloth_zs = cloth.getZs();
+                    String cloth_tipt = cloth.getTipt();
+                    String cloth_des = cloth.getDes();
 
-                Index car=index.get(1);   //洗车指数
-                String car_title=car.getTitle();
-                String car_zs=car.getZs();
-                String car_tipt=car.getTipt();
-                String car_des=car.getDes();
+                    Index car = index.get(1);   //洗车指数
+                    String car_title = car.getTitle();
+                    String car_zs = car.getZs();
+                    String car_tipt = car.getTipt();
+                    String car_des = car.getDes();
 
-                Index travel=index.get(2);    //旅游指数
-                String travel_title=travel.getTitle();
-                String travel_zs=travel.getZs();
-                String travel_tipt=travel.getTipt();
-                String travel_des=travel.getDes();
+                    Index travel = index.get(2);    //旅游指数
+                    String travel_title = travel.getTitle();
+                    String travel_zs = travel.getZs();
+                    String travel_tipt = travel.getTipt();
+                    String travel_des = travel.getDes();
 
-                Index ill=index.get(3);    //感冒指数
-                String ill_title=ill.getTitle();
-                String ill_zs=ill.getZs();
-                String ill_tipt=ill.getTipt();
-                String ill_des=ill.getDes();
+                    Index ill = index.get(3);    //感冒指数
+                    String ill_title = ill.getTitle();
+                    String ill_zs = ill.getZs();
+                    String ill_tipt = ill.getTipt();
+                    String ill_des = ill.getDes();
 
-                Index sports=index.get(4);    //运动指数
-                String sports_title=sports.getTitle();
-                String sports_zs=sports.getZs();
-                String sports_tipt=sports.getTipt();
-                String sports_des=sports.getDes();
+                    Index sports = index.get(4);    //运动指数
+                    String sports_title = sports.getTitle();
+                    String sports_zs = sports.getZs();
+                    String sports_tipt = sports.getTipt();
+                    String sports_des = sports.getDes();
 
-                Index light=index.get(5);      //紫外线指数
-                String light_title=light.getTitle();
-                String light_zs=light.getZs();
-                String light_tipt=light.getTipt();
-                String light_des=light.getDes();
+                    Index light = index.get(5);      //紫外线指数
+                    String light_title = light.getTitle();
+                    String light_zs = light.getZs();
+                    String light_tipt = light.getTipt();
+                    String light_des = light.getDes();
 
-                List<Weather_data> list_weather=results.getWeatherData();
-                Weather_data weather_1=list_weather.get(0);    //今日天气
-                String weather_1_date=weather_1.getDate();
-                String weather_1_weather=weather_1.getWeather();
-                String weather_1_wind=weather_1.getWind();
-                String weather_1_tem=weather_1.getTemperature();
+                    List<Weather_data> list_weather = results.getWeatherData();
+                    Weather_data weather_1 = list_weather.get(0);    //今日天气
+                    String weather_1_date = weather_1.getDate();
+                    String weather_1_weather = weather_1.getWeather();
+                    String weather_1_wind = weather_1.getWind();
+                    String weather_1_tem = weather_1.getTemperature();
 
-                Weather_data weather_2=list_weather.get(1);    //明日天气
-                String weather_2_date=weather_2.getDate();
-                String weather_2_weather=weather_2.getWeather();
-                String weather_2_wind=weather_2.getWind();
-                String weather_2_tem=weather_2.getTemperature();
+                    Weather_data weather_2 = list_weather.get(1);    //明日天气
+                    String weather_2_date = weather_2.getDate();
+                    String weather_2_weather = weather_2.getWeather();
+                    String weather_2_wind = weather_2.getWind();
+                    String weather_2_tem = weather_2.getTemperature();
 
-                Weather_data weather_3=list_weather.get(2);      //后天
-                String weather_3_date=weather_3.getDate();
-                String weather_3_weather=weather_3.getWeather();
-                String weather_3_wind=weather_3.getWind();
-                String weather_3_tem=weather_3.getTemperature();
+                    Weather_data weather_3 = list_weather.get(2);      //后天
+                    String weather_3_date = weather_3.getDate();
+                    String weather_3_weather = weather_3.getWeather();
+                    String weather_3_wind = weather_3.getWind();
+                    String weather_3_tem = weather_3.getTemperature();
 
-                Weather_data weather_4=list_weather.get(3);    //大后天
-                String weather_4_date=weather_4.getDate();
-                String weather_4_weather=weather_4.getWeather();
-                String weather_4_wind=weather_4.getWind();
-                String weather_4_tem=weather_4.getTemperature();
+                    Weather_data weather_4 = list_weather.get(3);    //大后天
+                    String weather_4_date = weather_4.getDate();
+                    String weather_4_weather = weather_4.getWeather();
+                    String weather_4_wind = weather_4.getWind();
+                    String weather_4_tem = weather_4.getTemperature();
 
 
-                SharedPreferences.Editor editor=getSharedPreferences(currentCity,MODE_PRIVATE).edit();
-                editor.putString("error",error);
-                editor.putString("status",status);
-                editor.putString("date",date);
-                editor.putString("city",currentCity);
-                editor.putString("pm25", pm25);
+                    SharedPreferences.Editor editor = getSharedPreferences(currentCity, MODE_PRIVATE).edit();
+                    editor.putInt("error", error);
+                    editor.putString("status", status);
+                    editor.putString("date", date);
+                    editor.putString("city", currentCity);
+                    editor.putString("pm25", pm25);
 
-                editor.putString("weather1",weather_1_weather);
-                editor.putString("tem1",weather_1_tem);
-                editor.putString("date1",weather_1_date);
-                editor.putString("wind1",weather_1_wind);
+                    editor.putString("weather1", weather_1_weather);
+                    editor.putString("tem1", weather_1_tem);
+                    editor.putString("date1", weather_1_date);
+                    editor.putString("wind1", weather_1_wind);
 
-                editor.putString("weather2",weather_2_weather);
-                editor.putString("tem2",weather_2_tem);
-                editor.putString("date2",weather_2_date);
-                editor.putString("wind2",weather_2_wind);
+                    editor.putString("weather2", weather_2_weather);
+                    editor.putString("tem2", weather_2_tem);
+                    editor.putString("date2", weather_2_date);
+                    editor.putString("wind2", weather_2_wind);
 
-                editor.putString("weather3", weather_3_weather);
-                editor.putString("tem3",weather_3_tem);
-                editor.putString("date3",weather_3_date);
-                editor.putString("wind3",weather_3_wind);
+                    editor.putString("weather3", weather_3_weather);
+                    editor.putString("tem3", weather_3_tem);
+                    editor.putString("date3", weather_3_date);
+                    editor.putString("wind3", weather_3_wind);
 
-                editor.putString("weather4", weather_4_weather);
-                editor.putString("tem4", weather_4_tem);
-                editor.putString("date4",weather_4_date);
-                editor.putString("wind4",weather_4_wind);
+                    editor.putString("weather4", weather_4_weather);
+                    editor.putString("tem4", weather_4_tem);
+                    editor.putString("date4", weather_4_date);
+                    editor.putString("wind4", weather_4_wind);
 
-                editor.putString("cloth",cloth_des);
-                editor.putString("sports",sports_des);
-                editor.putString("light",light_des);
-                editor.apply();
+                    editor.putString("cloth", cloth_des);
+                    editor.putString("sports", sports_des);
+                    editor.putString("light", light_des);
+                    editor.apply();
+                }
+                if (error==-3){
+                    SharedPreferences.Editor editor = getSharedPreferences(city2query, MODE_PRIVATE).edit();
+                    editor.putInt("error", error);
+                    editor.apply();
+                }
             }
         },
         new Response.ErrorListener() {

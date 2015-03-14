@@ -1,7 +1,5 @@
 package com.gc.materialdesign.views;
 
-import com.gc.materialdesign.R;
-
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -10,6 +8,8 @@ import android.graphics.drawable.LayerDrawable;
 import android.util.AttributeSet;
 import android.view.View;
 import android.widget.RelativeLayout;
+
+import com.gc.materialdesign.R;
 
 public class ProgressBarDeterminate extends CustomView {
 

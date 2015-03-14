@@ -16,10 +16,10 @@
 
 package com.android.volley.toolbox;
 
+import org.junit.Test;
+
 import java.io.IOException;
 import java.util.Arrays;
-
-import org.junit.Test;
 
 import static org.junit.Assert.*;
 
